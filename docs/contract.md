@@ -68,6 +68,7 @@ their value suppressed from error detail.
 
 ```text
 open-envault init
+open-envault setup <env> [--key-file <path>] (--from-file <path>|--from-stdin) [--format dotenv|json]
 open-envault env create <env>
 open-envault key generate <env>
 open-envault edit <env>
@@ -81,6 +82,13 @@ open-envault doctor [--format human|json]
 open-envault diff <envA> <envB> [--format human|json]
 open-envault rotate <env>
 ```
+
+`setup` is provider-neutral. It reuses an existing key without overwriting it,
+adds the derived recipient to the selected profile, safely merges incoming
+values, validates the complete result, and atomically writes ciphertext. It
+returns code `3` for invalid project, schema, key, or input configuration and
+never prints secret values or private key material. GitHub Environment and
+Secret creation are outside this contract.
 
 ## Stable CLI guarantees
 

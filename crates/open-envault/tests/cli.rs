@@ -40,6 +40,21 @@ fn project(dir: &Path) {
     .unwrap();
 }
 
+fn setup_project(dir: &Path) {
+    fs::create_dir_all(dir.join("config")).unwrap();
+    fs::create_dir_all(dir.join("secrets")).unwrap();
+    fs::write(
+        dir.join("open-envault.yaml"),
+        "project: setup-test\nenvironments:\n  prd:\n    file: secrets/prd.env.enc\n    schema: config/env.schema.yaml\n    recipients: []\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("config/env.schema.yaml"),
+        "variables:\n  API_KEY:\n    type: string\n    required: true\n  PORT:\n    type: integer\n    required: true\n",
+    )
+    .unwrap();
+}
+
 fn command(dir: &Path, args: &[&str]) -> Command {
     let mut command = Command::new(binary());
     command
@@ -227,6 +242,143 @@ fn set_rejects_invalid_variable_names() {
     let output = set.output_with_stdin(b"value\n");
     assert!(!output.status.success());
     assert!(!dir.path().join("secrets/dev.env.enc").exists());
+}
+
+#[test]
+fn setup_creates_reuses_and_does_not_overwrite_key() {
+    let dir = tempfile::tempdir().unwrap();
+    setup_project(dir.path());
+    let key_path = dir.path().join("outside").join("prod.age");
+    let source = dir.path().join("production.env");
+    fs::write(&source, "API_KEY=first\nPORT=443\n").unwrap();
+
+    let first = command(
+        dir.path(),
+        &[
+            "setup",
+            "prd",
+            "--key-file",
+            key_path.to_str().unwrap(),
+            "--from-file",
+            source.to_str().unwrap(),
+        ],
+    )
+    .output()
+    .unwrap();
+    assert!(
+        first.status.success(),
+        "{}",
+        String::from_utf8_lossy(&first.stderr)
+    );
+    assert!(!String::from_utf8_lossy(&first.stdout).contains("first"));
+    let key_before = fs::read(&key_path).unwrap();
+    let encrypted_before = fs::read(dir.path().join("secrets/prd.env.enc")).unwrap();
+    let config = fs::read_to_string(dir.path().join("open-envault.yaml")).unwrap();
+    assert!(config.contains("age1"));
+    assert!(config.contains("key_file"));
+
+    fs::write(&source, "API_KEY=second\nPORT=8443\n").unwrap();
+    let second = command(
+        dir.path(),
+        &[
+            "setup",
+            "prd",
+            "--key-file",
+            key_path.to_str().unwrap(),
+            "--from-file",
+            source.to_str().unwrap(),
+        ],
+    )
+    .output()
+    .unwrap();
+    assert!(
+        second.status.success(),
+        "{}",
+        String::from_utf8_lossy(&second.stderr)
+    );
+    assert_eq!(fs::read(&key_path).unwrap(), key_before);
+    assert_ne!(
+        fs::read(dir.path().join("secrets/prd.env.enc")).unwrap(),
+        encrypted_before
+    );
+
+    let generate = command(dir.path(), &["key", "generate", "prd"])
+        .output()
+        .unwrap();
+    assert!(!generate.status.success());
+    assert_eq!(fs::read(&key_path).unwrap(), key_before);
+}
+
+#[test]
+fn setup_failure_preserves_existing_ciphertext_and_schema_errors_fail_closed() {
+    let dir = tempfile::tempdir().unwrap();
+    setup_project(dir.path());
+    let key_path = dir.path().join("prod.age");
+    let source = dir.path().join("production.env");
+    fs::write(&source, "API_KEY=stable\nPORT=443\n").unwrap();
+    let first = command(
+        dir.path(),
+        &[
+            "setup",
+            "prd",
+            "--key-file",
+            key_path.to_str().unwrap(),
+            "--from-file",
+            source.to_str().unwrap(),
+        ],
+    )
+    .output()
+    .unwrap();
+    assert!(first.status.success());
+    let before = fs::read(dir.path().join("secrets/prd.env.enc")).unwrap();
+
+    fs::write(dir.path().join("config/env.schema.yaml"), "variables: [").unwrap();
+    fs::write(&source, "API_KEY=changed\nPORT=443\n").unwrap();
+    let failed = command(
+        dir.path(),
+        &[
+            "setup",
+            "prd",
+            "--key-file",
+            key_path.to_str().unwrap(),
+            "--from-file",
+            source.to_str().unwrap(),
+        ],
+    )
+    .output()
+    .unwrap();
+    assert!(!failed.status.success());
+    assert_eq!(
+        fs::read(dir.path().join("secrets/prd.env.enc")).unwrap(),
+        before
+    );
+}
+
+#[test]
+fn setup_accepts_json_from_stdin_without_printing_values() {
+    let dir = tempfile::tempdir().unwrap();
+    setup_project(dir.path());
+    let key_path = dir.path().join("prod.age");
+    let mut setup = command(
+        dir.path(),
+        &[
+            "setup",
+            "prd",
+            "--key-file",
+            key_path.to_str().unwrap(),
+            "--from-stdin",
+            "--format",
+            "json",
+        ],
+    );
+    let output = setup.output_with_stdin(br#"{"API_KEY":"json-value","PORT":"443"}"#);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(!String::from_utf8_lossy(&output.stdout).contains("json-value"));
+    assert!(dir.path().join("secrets/prd.env.enc").is_file());
 }
 
 trait CommandStdin {

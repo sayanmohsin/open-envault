@@ -22,7 +22,13 @@ pub fn load_environment(name: &str) -> anyhow::Result<BTreeMap<String, String>> 
     let project = core::load(&path)?;
     let profile = core::environment(&project, name)?;
     let root = path.parent().unwrap_or(&path);
-    let plaintext = crypto::decrypt_for(&root.join(&profile.file), Some(name))
-        .with_context(|| format!("decrypt environment {name}"))?;
+    let encrypted = core::resolve_path(&profile.file, root);
+    let configured_key = profile
+        .key_file
+        .as_deref()
+        .map(|key| core::resolve_path(key, root));
+    let plaintext =
+        crypto::decrypt_for_with_key_file(&encrypted, Some(name), configured_key.as_deref())
+            .with_context(|| format!("decrypt environment {name}"))?;
     Ok(schema::parse_env(&plaintext))
 }

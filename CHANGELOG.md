@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+* add provider-neutral `oenv setup` with safe key reuse, recipient derivation,
+  file/stdin input, schema validation, and idempotent encrypted updates
+* refuse to overwrite existing age key files and retain legacy key-directory
+  compatibility
+* harden atomic writes and document CI/GitHub responsibilities without a
+  Doppler dependency
+
 ## [0.3.1](https://github.com/sayanmohsin/open-envault/compare/v0.3.0...v0.3.1) (2026-09-07)
 
 

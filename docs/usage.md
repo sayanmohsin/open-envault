@@ -11,14 +11,19 @@ npm i -D open-envault     # Node wrapper (prebuilds/<platform>-<arch>/oenv)
 
 ```bash
 oenv init
-oenv env create dev
-oenv key generate dev            # prints # public key: age1...
-# add the printed age1... to open-envault.yaml recipients
-oenv set dev DATABASE_URL        # paste value on stdin
+oenv setup dev \
+  --key-file ~/.config/open-envault/keys/dev.txt \
+  --from-file ./dev.env
 oenv check dev
 cat secrets/dev.env.enc            # ciphertext — safe to commit
 oenv doctor --format json          # verify profiles, schemas, keys, and decryption
 ```
+
+Setup creates or reuses the age key, derives its public recipient, validates
+the schema, and writes only encrypted output. Existing keys are never
+overwritten. Rerunning setup safely merges values; a failed validation leaves
+the previous encrypted profile unchanged. On Windows, use a path such as
+`%APPDATA%\\open-envault\\keys\\dev.txt`.
 
 `oenv exec` is the runtime entrypoint:
 
@@ -28,20 +33,23 @@ oenv exec dev -- node server.js
 oenv exec prod -- ./target/release/app
 ```
 
-It decrypts `secrets/<env>.env.enc` with an age identity from `~/.config/open-envault/keys/<env>.txt` (or `ENVYPT_AGE_KEY` / `SOPS_AGE_KEY` in CI), parses dotenv, merges with the parent env, and spawns the child with inherited stdio/signals.
+It decrypts `secrets/<env>.env.enc` with an age identity from the configured
+key file, `~/.config/open-envault/keys/<env>.txt`, or
+`OPENENVAULT_AGE_KEY`/`SOPS_AGE_KEY` in CI, parses dotenv, merges with the
+parent env, and spawns the child with inherited stdio/signals.
 
 For a gradual migration, an existing injector can remain in the parent
 environment while selected open-envault values take precedence:
 
 ```bash
-doppler run -- oenv exec dev --force -- npm start
+existing-secret-provider run -- oenv exec dev --force -- npm start
 ```
 
 Bulk imports are stdin-only and do not create plaintext files:
 
 ```bash
-doppler secrets download --no-file --format=json |
-  oenv import dev --format json --merge
+some-secret-provider export --format=json |
+  oenv setup dev --from-stdin --format json
 ```
 
 Compare two profiles without printing values. Set the same private pepper for
@@ -54,15 +62,8 @@ oenv rotate prd
 
 ## CI (GitHub Actions)
 
-```yaml
-- uses: actions/checkout@v4
-- run: cargo install open-envault
-- env:
-    SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-  run: oenv exec prod -- cargo run
-```
-
-Or via npm wrapper: `npx oenv exec prod -- npm start`.
+See [`docs/ci.md`](ci.md). Open Envault validates and decrypts profiles; it
+does not create GitHub Environments or GitHub Secrets.
 
 ## Schema
 

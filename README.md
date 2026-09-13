@@ -37,20 +37,20 @@ Prebuilt binaries are attached to each [GitHub Release](https://github.com/sayan
 ## Quick start
 
 ```bash
-oenv init                       # creates open-envault.yaml, config/env.schema.yaml, secrets/, .sops.yaml
-oenv env create dev
-oenv key generate dev           # → prints # public key: age1...  (add it to open-envault.yaml recipients)
-# edit open-envault.yaml: recipients: [age1...]
-oenv set dev DATABASE_URL       # value read from stdin (never argv)
+oenv init
+oenv setup dev --key-file ~/.config/open-envault/keys/dev.txt --from-file ./dev.env
 oenv check dev --format json
 oenv exec dev -- npm start
 ```
 
-During a gradual migration, import an existing JSON or dotenv export through
-stdin without creating a plaintext file:
+`setup` creates or reuses the key without overwriting an existing key, derives
+the public recipient, validates the schema, and writes only encrypted output.
+Reruns safely merge incoming values.
+
+For provider exports, pipe JSON or dotenv through stdin:
 
 ```bash
-doppler secrets download --no-file --format=json | oenv import dev --format json --merge
+some-secret-provider export --format=json | oenv setup dev --from-stdin --format json
 ```
 
 `open-envault.yaml` example:
@@ -68,6 +68,7 @@ environments:
 
 ```
 oenv init
+oenv setup <env> [--key-file <path>] (--from-file <path>|--from-stdin) [--format dotenv|json]
 oenv env create <env>
 oenv key generate <env>
 open-envault set <env> <VAR>            # reads value from stdin
@@ -101,7 +102,7 @@ secrets/prod.env.enc
 .env.example
 ```
 
-Key sources (first match wins): `ENVYPT_AGE_KEY` / `SOPS_AGE_KEY` env var → `ENVYPT_AGE_KEY_FILE` / `SOPS_AGE_KEY_FILE` → `~/.config/open-envault/keys/<env>.txt` (0600). CI: set `SOPS_AGE_KEY` as a GitHub Actions secret.
+Key sources (first match wins): `OPENENVAULT_AGE_KEY` / `OPENENCRYPT_AGE_KEY` / `SOPS_AGE_KEY`, corresponding `*_FILE` variables, configured key file, then `~/.config/open-envault/keys/<env>.txt` (0600).
 
 ## TypeScript / NestJS
 
@@ -133,6 +134,8 @@ See [`docs/architecture.md`](docs/architecture.md) and [`docs/contract.md`](docs
 
 - [Architecture](docs/architecture.md) — principles, crate map, storage format, key sources
 - [Contract](docs/contract.md) — exit codes and stable JSON envelopes for wrappers
+- [Usage](docs/usage.md) — setup, CI, recovery, and cross-platform workflows
+- [CI guidance](docs/ci.md) — provider-neutral GitHub Actions guidance
 
 ## License
 

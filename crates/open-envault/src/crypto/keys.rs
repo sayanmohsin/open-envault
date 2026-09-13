@@ -15,8 +15,12 @@ pub use age::x25519::{Identity, Recipient};
 pub type PublicKey = Recipient;
 
 pub const SECRET_LINE_PREFIX: &str = "AGE-SECRET-KEY-";
-const IDENTITY_VARS: [&str; 2] = ["OPENENCRYPT_AGE_KEY", "SOPS_AGE_KEY"];
-const IDENTITY_FILE_VARS: [&str; 2] = ["OPENENCRYPT_AGE_KEY_FILE", "SOPS_AGE_KEY_FILE"];
+const IDENTITY_VARS: [&str; 3] = ["OPENENVAULT_AGE_KEY", "OPENENCRYPT_AGE_KEY", "SOPS_AGE_KEY"];
+const IDENTITY_FILE_VARS: [&str; 3] = [
+    "OPENENVAULT_AGE_KEY_FILE",
+    "OPENENCRYPT_AGE_KEY_FILE",
+    "SOPS_AGE_KEY_FILE",
+];
 
 /// Parse a single public recipient string (`age1...`).
 pub fn parse_recipient(input: &str) -> Result<Recipient> {
@@ -51,7 +55,7 @@ pub fn read_identity_file(path: &Path) -> Result<Identity> {
     identity_from_key_text(&text).with_context(|| format!("parse key file {}", path.display()))
 }
 
-/// Collect identities from `OPENENCRYPT_AGE_KEY` / `SOPS_AGE_KEY` and the
+/// Collect identities from `OPENENVAULT_AGE_KEY` / compatibility aliases and the
 /// corresponding `*_KEY_FILE` variables. Missing variables are skipped.
 pub fn identities_from_env() -> Vec<Identity> {
     let mut identities = Vec::new();

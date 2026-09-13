@@ -17,6 +17,7 @@ Built for Rust projects and any language that spawns a child process (Arqen, Nes
 - **Fail-closed** — bad config/schema/key/ciphertext → non-zero exit, redacted diagnostics
 - **Memory-only secrets** — data keys and values are zeroized, never logged or written to disk (atomic writes, 0600 key files)
 - **Schema & diagnostics** — `string`/`integer`/`boolean`/`url`/`enum`/`duration` + `required`/`secret`/`env` guards, human + stable JSON output
+- **Guided setup** — `oenv setup` safely creates or reuses keys, derives recipients, validates schemas, and writes encrypted profiles
 - **Runtime injection** — `oenv exec dev -- <cmd>` merges decrypted values into the child’s env and preserves exit codes/signals
 
 ## Install
@@ -37,14 +38,15 @@ Prebuilt binaries are attached to each [GitHub Release](https://github.com/sayan
 ## Quick start
 
 ```bash
-oenv init                       # creates open-envault.yaml, config/env.schema.yaml, secrets/, .sops.yaml
-oenv env create dev
-oenv key generate dev           # → prints # public key: age1...  (add it to open-envault.yaml recipients)
-# edit open-envault.yaml: recipients: [age1...]
-oenv set dev DATABASE_URL       # value read from stdin (never argv)
+oenv init
+oenv setup dev --key-file ~/.config/open-envault/keys/dev.txt --from-file ./dev.env
 oenv check dev --format json
 oenv exec dev -- npm start
 ```
+
+Setup reuses existing keys without overwriting them, preserves configured
+recipients, safely merges reruns, and writes only encrypted output. Provider
+exports can be piped through stdin with `--from-stdin`.
 
 `open-envault.yaml` example:
 
@@ -61,6 +63,7 @@ environments:
 
 ```
 oenv init
+oenv setup <env> [--key-file <path>] (--from-file <path>|--from-stdin) [--format dotenv|json]
 oenv env create <env>
 oenv key generate <env>
 open-envault set <env> <VAR>            # reads value from stdin
@@ -85,7 +88,7 @@ secrets/prod.env.enc
 .env.example
 ```
 
-Key sources (first match wins): `ENVYPT_AGE_KEY` / `SOPS_AGE_KEY` env var → `ENVYPT_AGE_KEY_FILE` / `SOPS_AGE_KEY_FILE` → `~/.config/open-envault/keys/<env>.txt` (0600). CI: set `SOPS_AGE_KEY` as a GitHub Actions secret.
+Key sources (first match wins): `OPENENVAULT_AGE_KEY` / `OPENENCRYPT_AGE_KEY` / `SOPS_AGE_KEY`, corresponding `*_FILE` variables, configured key file, then `~/.config/open-envault/keys/<env>.txt` (0600).
 
 ## TypeScript / NestJS
 
@@ -117,6 +120,8 @@ See [`docs/architecture.md`](docs/architecture.md) and [`docs/contract.md`](docs
 
 - [Architecture](docs/architecture.md) — principles, crate map, storage format, key sources
 - [Contract](docs/contract.md) — exit codes and stable JSON envelopes for wrappers
+- [Usage](../../docs/usage.md) — setup, CI, recovery, and cross-platform workflows
+- [CI guidance](../../docs/ci.md) — provider-neutral GitHub Actions guidance
 
 ## License
 

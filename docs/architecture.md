@@ -68,12 +68,13 @@ closed.
 
 ## Key sources (resolution order)
 
-1. `OPENENCRYPT_AGE_KEY` — explicit identity, CI-friendly (never echoed).
-2. `SOPS_AGE_KEY` — compatibility with SOPS-based CI workflows.
-3. Profile `key_file` from `open-envault.yaml`.
-4. Developer default:
+1. `OPENENVAULT_AGE_KEY` — canonical explicit identity, CI-friendly (never echoed).
+2. `OPENENCRYPT_AGE_KEY` — legacy compatibility alias.
+3. `SOPS_AGE_KEY` — compatibility with SOPS-based CI workflows.
+4. Profile `key_file` from `open-envault.yaml`.
+5. Developer default:
    `$XDG_CONFIG_HOME|~/.config/open-envault/keys/<environment>.txt`.
-5. Server/deploy key paths configured for deployment environments.
+6. Server/deploy key paths configured for deployment environments.
 
 Key files are enforced mode 0600 and must live outside the repository.
 Recipients are per environment and public; they belong in Git.
@@ -97,3 +98,17 @@ values with the inherited process environment, spawns the child with inherited
 stdio, forwards signals, and propagates the child's exit status. Inherited
 process environment wins over loaded values unless `--force` is given. No
 plaintext `.env` file is created.
+
+## Guided setup
+
+`oenv setup <env>` validates the project and schema, resolves or creates a
+no-clobber age identity, derives its public recipient, preserves existing
+recipients, reads dotenv or JSON from a file or stdin, merges values, and
+atomically writes the encrypted profile. Configuration is rewritten through
+the typed `Project` model. Provider CLIs, GitHub APIs, and secret-manager APIs
+are not called by the core.
+
+The default key directory is `~/.config/open-envault/keys`. The historical
+`~/.config/open_envault/keys` directory remains a read compatibility fallback.
+Relative configured paths resolve from `open-envault.yaml`; `~` resolves from
+`HOME` or `USERPROFILE`.
