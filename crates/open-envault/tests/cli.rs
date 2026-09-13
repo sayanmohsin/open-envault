@@ -389,7 +389,10 @@ impl CommandStdin for Command {
     fn output_with_stdin(&mut self, input: &[u8]) -> std::process::Output {
         use std::io::Write;
         let mut child = self.stdin(std::process::Stdio::piped()).spawn().unwrap();
-        child.stdin.take().unwrap().write_all(input).unwrap();
+        // Commands that reject their arguments before reading stdin may close
+        // the pipe immediately. That is an expected test outcome, not a
+        // failure of the command under test.
+        let _ = child.stdin.take().unwrap().write_all(input);
         child.wait_with_output().unwrap()
     }
 }
