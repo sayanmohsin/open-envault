@@ -9,6 +9,13 @@
 * harden atomic writes and document CI/GitHub responsibilities without a
   Doppler dependency
 
+## [0.4.0](https://github.com/sayanmohsin/open-envault/compare/v0.3.2...v0.4.0) (2026-09-13)
+
+
+### Features
+
+* add guided encrypted environment setup ([c290917](https://github.com/sayanmohsin/open-envault/commit/c29091701386cf43ea4f19e45688a1388dc90509))
+
 ## [0.3.2](https://github.com/sayanmohsin/open-envault/compare/v0.3.1...v0.3.2) (2026-09-07)
 
 
