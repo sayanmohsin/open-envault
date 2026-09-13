@@ -1,6 +1,6 @@
 {
   "name": "open-envault",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Local-first SOPS-compatible secrets for Git and Rust",
   "repository": {
     "type": "git",

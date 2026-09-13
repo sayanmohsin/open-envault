@@ -9,6 +9,13 @@
 * harden atomic writes and document CI/GitHub responsibilities without a
   Doppler dependency
 
+## [0.3.2](https://github.com/sayanmohsin/open-envault/compare/v0.3.1...v0.3.2) (2026-09-07)
+
+
+### Bug Fixes
+
+* include platform binaries in npm package ([7e99c31](https://github.com/sayanmohsin/open-envault/commit/7e99c31432439cdac66cd5579ec66c9673a7e63d))
+
 ## [0.3.1](https://github.com/sayanmohsin/open-envault/compare/v0.3.0...v0.3.1) (2026-09-07)
 
 
